@@ -1,0 +1,17 @@
+*.class
+**/bin/*/**
+**/target/**
+**/logs/**
+**/.idea/**
+**/.settings/**
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+/.idea
+/gradle
+*.iml
+/captures
+*.apk

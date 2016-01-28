@@ -1,0 +1,63 @@
+{
+  "dataSetId": "exampleDataSetID.sqlite",
+  "db": "example",
+  "encrypt": "123456",
+  "dimensions": [
+    {
+      "granularities": [
+        {
+          "key": "COL_0_0",
+          "title": "市级行政"
+        },
+        {
+          "key": "COL_0_1",
+          "title": "区级行政"
+        }
+      ],
+      "key": "Dimension_1",
+      "title": "地区"
+    },
+    {
+      "granularities": [
+        {
+          "key": "COL_0_2",
+          "title": "年"
+        },
+        {
+          "key": "COL_0_3",
+          "title": "季"
+        },
+        {
+          "key": "COL_0_4",
+          "title": "月"
+        },
+        {
+          "key": "COL_0_5",
+          "title": "日"
+        }
+      ],
+      "key": "Dimension_2",
+      "title": "时间"
+    }
+  ],
+  "measures": [
+    {
+      "key": "COL_0_6",
+      "title": "一般公共预算支出"
+    },
+    {
+      "aggregator": "avg",
+      "key": "COL_0_7",
+      "title": "一般公共预算支出同比"
+    },
+    {
+      "key": "COL_0_8",
+      "title": "一般公共服务支出"
+    },
+    {
+      "aggregator": "avg",
+      "key": "COL_0_9",
+      "title": "一般公共服务支出同比"
+    }
+  ]
+}
