@@ -565,7 +565,9 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
     }
 
     private File internalGenerateDbFolder() {
-        return new File(getTargetDatabaseFolderPath());
+        String uuid = StringUtils.replace(UUID.randomUUID().toString(), "-", "");
+        return new File(getTargetDatabaseFolderPath(), uuid);
+
     }
 
     /**

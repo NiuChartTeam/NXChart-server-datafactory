@@ -1,5 +1,5 @@
 {
-  "dataSetId": "exampleDataSetID.sqlite",
+  "dataSetId": "exampleDataSetID",
   "db": "example",
   "encrypt": "123456",
   "dimensions": [
@@ -46,18 +46,8 @@
       "title": "一般公共预算支出"
     },
     {
-      "aggregator": "avg",
-      "key": "COL_0_7",
-      "title": "一般公共预算支出同比"
-    },
-    {
       "key": "COL_0_8",
       "title": "一般公共服务支出"
-    },
-    {
-      "aggregator": "avg",
-      "key": "COL_0_9",
-      "title": "一般公共服务支出同比"
     }
   ]
 }

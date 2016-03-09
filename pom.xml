@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <parent>
+    <!--<parent>
         <artifactId>NXChart-server-project</artifactId>
         <groupId>com.niuchart</groupId>
         <version>0.0.1-SNAPSHOT</version>
-    </parent>
+    </parent>-->
 
     <modelVersion>4.0.0</modelVersion>
-
+    <groupId>com.niuchart</groupId>
     <artifactId>NXChart-server-datafactory</artifactId>
     <packaging>jar</packaging>
-
     <name>NXChart-server-datafactory</name>
     <url>http://api.niuchart.com</url>
+    <version>0.0.1-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -110,7 +110,7 @@
 
         <dependency>
             <groupId>com.niuchart</groupId>
-            <artifactId>sqlite</artifactId>
+            <artifactId>sqlite-jdbc</artifactId>
             <version>1.0</version>
         </dependency>
 
