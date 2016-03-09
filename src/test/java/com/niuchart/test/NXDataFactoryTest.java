@@ -87,46 +87,4 @@ public class NXDataFactoryTest {
         };
         productor.createCube(mMetaDataId, mCube.getDataSetId(), mCube.getDimensions(), mCube.getMeasures(), mCube.getEncrypt());
     }
-
-    @After
-    public void checkIsDataEncrypt() throws SQLException {
-        File dbFile = new File(TARGET_PATH, "db.nxdb");
-        String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
-
-        Properties props = new Properties();
-        final String password = mCube.getEncrypt();
-        props.put("key", password);
-        Connection conn = DriverManager.getConnection(url, props);
-        conn.setAutoCommit(false);
-
-        Statement st = conn.createStatement();
-        st.executeUpdate("create table ants (col int)");
-        st.executeUpdate("insert into ants values( 300 )");
-        st.executeUpdate("insert into ants values( 400 )");
-        st.close();
-        conn.commit();
-        conn.close();
-
-        // Try reading without key.
-        props.remove("key");
-        conn = DriverManager.getConnection(url, props);
-
-        try {
-            st = conn.createStatement();
-            ResultSet rs = st.executeQuery("select count(*) from ants");
-            fail("Database not encrypted.");
-        } catch (SQLException ignore) {
-        }
-
-        conn.close();
-        props.put("key", password);
-        conn = DriverManager.getConnection(url, props);
-
-        st = conn.createStatement();
-        ResultSet rs = st.executeQuery("select count(*) from ants");
-        assertTrue(rs.next());
-        assertEquals(2, rs.getInt(1));
-        conn.close();
-
-    }
 }
