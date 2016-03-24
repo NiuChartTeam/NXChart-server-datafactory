@@ -13,7 +13,7 @@ public class NXMeasures implements NXKeyMeasureCommand {
     private String key;
     private String title;
     /**
-     * "SUM", "AVG", "MIN", "MAX", or "COUNT". Default SUM
+     * "SUM", "AVG". Default SUM
      */
     String mAggregator;
     //是否是用公式计算的

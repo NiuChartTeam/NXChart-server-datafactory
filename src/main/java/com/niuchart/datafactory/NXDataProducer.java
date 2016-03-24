@@ -16,11 +16,35 @@ import java.util.*;
 public abstract class NXDataProducer implements MetadataCubeOperator{
     private static final Logger logger = Logger.getLogger(NXDataProducer.class);
 
-    private Connection cubeConn;
-    private Statement cubeStmt;
-    private Statement cubeStmt2;
+    /**
+     * sqlite最终生成的db的连接
+     */
+    private Connection mCubeConn;
+    /**
+     * sqlite最终生成的db的语句
+     */
+    private Statement mCubeStmt;
+    /**
+     * sqlite最终生成的db的语句2
+     */
+    private Statement mCubeStmt2;
 
+    /**
+     * 数据源的连接
+     */
+    protected Connection mDataSetConn;
+    /**
+     * 数据源的sql语句
+     */
+    protected Statement mDataSetStmt;
+
+    /**
+     * 最终生成文件夹目录
+     */
     private File baseFolder;
+    /**
+     * 粒度key的set
+     */
     private Set<String> granularityKeys;
 
     /**
@@ -39,9 +63,9 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
         }
 
         Class.forName("org.sqlite.JDBC");
-        cubeConn = DriverManager.getConnection("jdbc:sqlite:" + cubeDbFile.getAbsolutePath());
-        cubeConn.setAutoCommit(false);
-        cubeStmt = cubeConn.createStatement();
+        mCubeConn = DriverManager.getConnection("jdbc:sqlite:" + cubeDbFile.getAbsolutePath());
+        mCubeConn.setAutoCommit(false);
+        mCubeStmt = mCubeConn.createStatement();
 
         Map<String, List<String>> result = new HashMap<String, List<String>>();
 
@@ -49,7 +73,7 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
             String tablename = "CT_" + StringUtils.replace(metadataId, "-", "") + "_" + column;
             String sql = "select name from " + tablename + " order by _ID";
             List<String> values = new ArrayList<String>();
-            ResultSet rs = cubeStmt.executeQuery(sql);
+            ResultSet rs = mCubeStmt.executeQuery(sql);
             while (rs.next()) {
                 String v = rs.getString("name");
                 if (!StringUtils.isEmpty(v)) {
@@ -76,15 +100,15 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
         Class.forName("org.sqlite.JDBC");
         baseFolder = generateDbFolder();
         logger.info("Metadata cube folder: " + baseFolder.getAbsolutePath());
-        File dbFile = new File(baseFolder, MetadataCubeOperator.DB_FILE_NAME);
+        File dbFile = new File(baseFolder, getCubeGenerateDbName());
         Properties props = new Properties();
         if (password != null) {
             props.put("key", password);
         }
-        cubeConn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath(),props);
-        cubeConn.setAutoCommit(false);
-        cubeStmt = cubeConn.createStatement();
-        cubeStmt2 = cubeConn.createStatement();
+        mCubeConn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath(),props);
+        mCubeConn.setAutoCommit(false);
+        mCubeStmt = mCubeConn.createStatement();
+        mCubeStmt2 = mCubeConn.createStatement();
 
         //生成粒度集合
         granularityKeys = new HashSet<String>();
@@ -115,12 +139,6 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
             }
         }
 
-        // 创建维度表
-        String factTablename = "T_" + StringUtils.replace(metadataId, "-", "") + "_L" + (level - 1);
-        for (NXKeyDimenCommand dimension : dimensions) {
-            this.generateDimensionTables(metadataId, factTablename, dimension);
-        }
-
         return baseFolder.getName();
     }
 
@@ -130,7 +148,23 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
      * @return 指定粒度key的所有唯一粒度值
      * @throws Exception
      */
-    protected abstract List<Object> getDataSetDistinctValueByGranKey(String granKey) throws Exception;
+    protected List<Object> getDataSetDistinctValueByGranKey(String granKey) throws Exception {
+        List<Object> result = new ArrayList<Object>();
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("select distinct ").append(granKey).append(", min(_id)");
+        sqlBuilder.append(" from ").append(getDataSetTableName()).append(" group by ").append(granKey).append(" order by min(_id)");
+        String sql = sqlBuilder.toString();
+        logger.info("Query sql for column table: " + sql);
+        ResultSet rs = mDataSetStmt.executeQuery(sql);
+
+        List<String> columnNames = new ArrayList<String>();
+        columnNames.add(granKey);
+        while (rs.next()) {
+            Object objValue = rs.getObject(granKey);
+            result.add(objValue);
+        }
+        return result;
+    }
     /**
      * 创建粒度列表
      * @param metadataId    元数据id
@@ -156,10 +190,10 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
 
             logger.info("SQL for creating column table: " + sb.toString());
 
-            cubeStmt.execute(sb.toString());
+            mCubeStmt.execute(sb.toString());
         }
 
-        cubeConn.commit();
+        mCubeConn.commit();
 
         // 写数据
         {
@@ -177,93 +211,50 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
                 }
                 sb.append(")");
                 logger.debug("SQL for insert column table row: " + sb.toString());
-                cubeStmt.execute(sb.toString());
+                mCubeStmt.execute(sb.toString());
                 columnIdMap.put(objValue == null ? null : StringEscapeUtils.escapeSql(objValue.toString()), i + 1);
             }
             logger.info(granValueList.size() + " records inserted into table: " + tableName);
-            cubeConn.commit();
+            mCubeConn.commit();
         }
 
         return columnIdMap;
 
     }
 
-    protected void generateDimensionTables(String metadataId, String factTablename, NXKeyDimenCommand dimension) throws Exception {
-        String tableName = "DT_" + StringUtils.replace(metadataId, "-", "") + "_" + dimension.getKey();
 
-        // 建表
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.append("CREATE TABLE ").append(tableName);
-            sb.append("(");
-            for (NXKeyCommand granStru : dimension.getGranularities()) {
-                sb.append(granStru.getKey()).append(" INTEGER,");
-            }
-            sb.append(" _ID INTEGER PRIMARY KEY AUTOINCREMENT");
-            sb.append(")");
+    protected List<Map<String, Object>> queryLevelDataFromDataSet( List<String> selectFields,List<String> groupFields,
+                                                                   List<String> dimensionColumnNames,List<String> measureColumnNames,boolean isGroupNotNeeded) throws SQLException {
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("select ").append(StringUtils.join(selectFields, ","));
 
-            logger.info("SQL for creating dimension table: " + sb.toString());
-
-            cubeStmt.execute(sb.toString());
+        sqlBuilder.append(" from ").append(getDataSetTableName());
+        if (!isGroupNotNeeded) {
+            sqlBuilder.append(" group by ").append(StringUtils.join(groupFields, ","));
         }
 
-        cubeConn.commit();
+        String sql = sqlBuilder.toString();
 
-        // 写数据
-        {
+        logger.info("Query sql for table: " + sql);
 
-            List<String> columnNames = new ArrayList<String>();
 
-            StringBuilder sqlBuilder = new StringBuilder();
-            sqlBuilder.append("select distinct ");
-            for (int i = 0; i < dimension.getGranularities().size(); i++) {
-                if (i > 0) {
-                    sqlBuilder.append(",");
-                }
-                NXKeyCommand granStru = dimension.getGranularities().get(i);
-                sqlBuilder.append(granStru.getKey());
-                columnNames.add(granStru.getKey());
+        ResultSet rs = mDataSetStmt.executeQuery(sql);
+
+        List<Map<String, Object>> results = new ArrayList<Map<String, Object>>();
+        while (rs.next()) {
+            Map<String, Object> eachObj = new HashMap<String, Object>();
+            for (String columnName : dimensionColumnNames) {
+                eachObj.put(columnName, rs.getString(columnName));
             }
-            sqlBuilder.append(" from ").append(factTablename).append(" order by _id");
-            String sql = sqlBuilder.toString();
-            logger.info("Query sql for dimension table: " + sql);
-            ResultSet rs = cubeStmt.executeQuery(sql);
 
-            int count = 0;
-
-            while (rs.next()) {
-                count++;
-                StringBuilder sb = new StringBuilder();
-                sb.append("INSERT INTO ").append(tableName);
-                sb.append("(");
-                sb.append(StringUtils.join(columnNames, ","));
-                sb.append(") values (");
-
-                for (int i = 0; i < columnNames.size(); i++) {
-                    if (i > 0) {
-                        sb.append(",");
-                    }
-                    String columnName = columnNames.get(i);
-                    Object objValue = rs.getObject(columnName);
-                    if (objValue == null || StringUtils.isEmpty(objValue.toString())) {
-                        sb.append("null");
-                    } else {
-                        String value = StringEscapeUtils.escapeSql(objValue.toString());
-                        sb.append("'").append(value).append("'");
-                    }
-                }
-
-                sb.append(")");
-                logger.debug("SQL for insert dimension table row: " + sb.toString());
-                cubeStmt2.execute(sb.toString());
+            for (String columnName : measureColumnNames) {
+                eachObj.put(columnName, rs.getDouble(columnName));
             }
-            logger.info(count + " records inserted into table: " + tableName);
-            cubeConn.commit();
+            results.add(eachObj);
         }
-
+        return results;
     }
 
-    abstract protected List<Map<String, Object>> queryLevelDataFromDataSet(List<String> selectFields, List<String> groupFields, List<String> dimensionColumnNames, List<String> measureColumnNames, boolean isGroupNotNeeded) throws SQLException;
     /**
      * 创建汇总表
      * <p/>
@@ -334,7 +325,7 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
         // 建表
         String tableName = "T_" + StringUtils.replace(metadataId, "-", "") + "_L" + level;
         createTable(tableName, columns, dimensions, measures, level);
-        cubeConn.commit();
+        mCubeConn.commit();
 
         //查数据
         List<Map<String, Object>> dataSetList = queryLevelDataFromDataSet(selectFields, groupFields, dimensionColumnNames, measureColumnNames, isGroupNotNeeded);
@@ -342,7 +333,7 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
         List<String> columnNames = new ArrayList<String>();
         columnNames.addAll(dimensionColumnNames);
         columnNames.addAll(measureColumnNames);
-        PreparedStatement pareStmt = createPreparestatementInsert(cubeConn, tableName, columnNames);
+        PreparedStatement pareStmt = createPreparestatementInsert(mCubeConn, tableName, columnNames);
 
         for (int i = 0; i < dataSetList.size(); i++) {
             //一行数据的映身寸
@@ -375,13 +366,13 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
             if (i >= 50000 && i % 50000 == 0) {
                 logger.info((i + 1) + " records inserted into table: " + tableName);
                 pareStmt.executeBatch();
-                cubeConn.commit();
+                mCubeConn.commit();
             }
         }
 
         logger.info(dataSetList.size() + " records inserted into table: " + tableName);
         pareStmt.executeBatch();
-        cubeConn.commit();
+        mCubeConn.commit();
 
         return true;
 
@@ -457,12 +448,12 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
 
         logger.info("SQL for creating metadata dataset table: " + sb.toString());
 
-        cubeStmt.execute(sb.toString());
+        mCubeStmt.execute(sb.toString());
 
         {
             String sql = "CREATE INDEX IDX_" + tableName + "  ON " + tableName + " (" + StringUtils.join(granColumnNames, ",") + ")";
             logger.info("Creating index: " + sql);
-            cubeStmt.execute(sql);
+            mCubeStmt.execute(sql);
         }
 
         // 如果超过2个维度, 每个维度的第一个粒度, 建立联合索引
@@ -476,7 +467,7 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
                             + dimensions.get(m).getGranularities().get(0).getKey();
                     String sql = "CREATE INDEX IDX_" + tableName + "_" + (idxIndex++) + "  ON " + tableName + " (" + idxColumns + ")";
                     logger.info("Creating index: " + sql);
-                    cubeStmt.execute(sql);
+                    mCubeStmt.execute(sql);
                     m++;
                 }
             }
@@ -521,23 +512,31 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
         }
         sb.append(")");
         logger.debug("SQL for insert metadata dataset row: " + sb.toString());
-        cubeStmt.execute(sb.toString());
+        mCubeStmt.execute(sb.toString());
 
     }
 
     @Override
     public void close() {
         try {
-            cubeStmt.close();
+            mCubeStmt.close();
         } catch (Exception e) {
         }
         try {
-            cubeStmt2.close();
+            mCubeStmt2.close();
         } catch (Exception e) {
         }
 
         try {
-            cubeConn.close();
+            mCubeConn.close();
+        } catch (Exception e) {
+        }
+        try {
+            mDataSetStmt.close();
+        } catch (Exception e) {
+        }
+        try {
+            mDataSetConn.close();
         } catch (Exception e) {
         }
     }
@@ -569,10 +568,19 @@ public abstract class NXDataProducer implements MetadataCubeOperator{
         return new File(getTargetDatabaseFolderPath(), uuid);
 
     }
-
     /**
      * SQLite文件产生的目标文件夹路径
      * @return
      */
     public abstract String getTargetDatabaseFolderPath();
+
+    @Override
+    public String getDataSetTableName() {
+        return "DATASET";
+    }
+
+    @Override
+    public String getCubeGenerateDbName() {
+        return "db.nxdb";
+    }
 }

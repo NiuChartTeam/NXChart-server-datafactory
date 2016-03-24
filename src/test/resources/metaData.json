@@ -1,7 +1,6 @@
 {
   "dataSetId": "exampleDataSetID",
   "db": "example",
-  "encrypt": "123456",
   "dimensions": [
     {
       "granularities": [
