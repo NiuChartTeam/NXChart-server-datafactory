@@ -7,8 +7,6 @@ import com.niuchart.test.factory.NXProducerMySQLDataSource;
 import com.niuchart.test.mock.NXDataSetMockMySQLGenerator;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 

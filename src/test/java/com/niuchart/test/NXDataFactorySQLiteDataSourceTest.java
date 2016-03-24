@@ -3,13 +3,10 @@ package com.niuchart.test;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.niuchart.test.cube.NXCubeStructure;
-import com.niuchart.test.factory.NXProducerMySQLDataSource;
 import com.niuchart.test.factory.NXProducerSQLiteDataSource;
-import com.niuchart.test.mock.NXDataSetMockMySQLGenerator;
 import com.niuchart.test.mock.NXDataSetMockSQLiteGenerator;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
