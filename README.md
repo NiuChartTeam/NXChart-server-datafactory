@@ -115,7 +115,7 @@
 [NXDataSetMockSQLiteGenerator](https://github.com/NiuChartTeam/NXChart-server-datafactory/blob/master/src/test/java/com/niuchart/test/mock/NXDataSetMockSQLiteGenerator.java)是用来生成数据模拟SQlite数据源的。
 
 SQLite数据源生成层级数据库代码：
-{%ace edit=false, lang='java', theme='monokai'%}  
+```java
 
 public void generateSQLiteFile() throws Exception {
     NXProducerSQLiteDataSource productor = new NXProducerSQLiteDataSource(){
@@ -127,11 +127,11 @@ public void generateSQLiteFile() throws Exception {
     productor.createCube(mMetaDataId, mCube.getDataSetId(), mCube.getDimensions(), mCube.getMeasures(), mCube.getEncrypt());
 }
         
-{%endace%}   
+``` 
 
 MySQL数据源生成层级数据库代码：
 
-{%ace edit=false, lang='java', theme='monokai'%}  
+```java
 
 public void generateSQLiteFile() throws Exception {
   //生成取终供sdk使用的层级数据库，默认放在target目录
@@ -144,5 +144,5 @@ public void generateSQLiteFile() throws Exception {
   productor.createCube(mMetaDataId, mCube.getDataSetId(), mCube.getDimensions(), mCube.getMeasures(), mCube.getEncrypt());
 }
 
-{%endace%}   
+```   
 
